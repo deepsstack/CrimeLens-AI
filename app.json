@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "CrimeLens AI",
+    "slug": "crimelens-ai-blueprint",
+    "version": "1.0.0",
+    "sdkVersion": "54.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.crimelens.ai"
+    },
+    "plugins": [
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow CrimeLens AI to use the microphone for voice investigation.",
+          "speechRecognitionPermission": "Allow CrimeLens AI to convert speech into investigation queries."
+        }
+      ]
+    ]
+  }
+}
