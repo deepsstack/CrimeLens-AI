@@ -32,10 +32,21 @@ import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 
+// ── Native speech recognition (expo-speech-recognition) ──────────────────────
+// TEMPORARILY DISABLED for Expo Go compatibility.
+// The native module requires a custom dev build (npx expo run:android).
+// On web, browser SpeechRecognition is used instead (see utils/webSpeechRecognition.ts).
+// To re-enable: uncomment the import below and remove the no-op shim further below.
+//
+// import {
+//   ExpoSpeechRecognitionModule,
+//   useSpeechRecognitionEvent,
+// } from "expo-speech-recognition";
+
 import {
-  ExpoSpeechRecognitionModule,
-  useSpeechRecognitionEvent,
-} from "expo-speech-recognition";
+  webSpeechRecognizer,
+  WebSpeechRecognizer,
+} from "../utils/webSpeechRecognition";
 
 // ======================================================
 // i18n
@@ -82,6 +93,10 @@ import {
 } from "../components/investigation/InvestigationTopBar";
 
 import {
+  NavigationDrawer,
+} from "../components/investigation/NavigationDrawer";
+
+import {
   WelcomeCard,
 } from "../components/investigation/WelcomeCard";
 
@@ -124,6 +139,32 @@ import {
 import {
   AIStatusCard,
 } from "../components/investigation/AIStatusCard";
+
+// ======================================================
+// NATIVE SPEECH RECOGNITION — TEMPORARILY DISABLED
+// (Expo Go compatibility: native module requires custom dev build)
+//
+// No-op shim replaces ExpoSpeechRecognitionModule and
+// useSpeechRecognitionEvent so that:
+//   • Expo Go loads without crashing
+//   • Web voice (window.SpeechRecognition) continues working
+//   • All native call-sites are safely silenced
+//
+// To re-enable: comment out this shim block and uncomment
+// the import at the top of the file.
+// ======================================================
+const ExpoSpeechRecognitionModule = {
+  start: (_opts: unknown) => { /* no-op */ },
+  stop:  () =>              { /* no-op */ },
+  abort: () =>              { /* no-op */ },
+  requestPermissionsAsync: async () => ({ granted: false as const }),
+};
+function useSpeechRecognitionEvent(
+  _eventName: string,
+  _handler: (...args: any[]) => void
+): void {
+  // no-op — native speech module is disabled for Expo Go
+}
 
 // ======================================================
 // LOCAL TYPES
@@ -2384,9 +2425,10 @@ export function AIInvestigationWorkspace({
   const t =
     T[lang];
 
-  // ===================================================
-  // STATE
-  // ===================================================
+  const [
+    drawerVisible,
+    setDrawerVisible,
+  ] = useState<boolean>(false);
 
   const [
     messages,
@@ -2420,6 +2462,13 @@ export function AIInvestigationWorkspace({
     setVoiceRecording,
   ] = useState<boolean>(
     false
+  );
+
+  const [
+    voiceMessage,
+    setVoiceMessage,
+  ] = useState<string | null>(
+    null
   );
 
   const [
@@ -4435,6 +4484,8 @@ export function AIInvestigationWorkspace({
     "result",
     (event) => {
 
+      if (Platform.OS === "web") return;
+
       const transcript =
         String(
           event.results?.[0]
@@ -4469,6 +4520,8 @@ export function AIInvestigationWorkspace({
     "start",
     () => {
 
+      if (Platform.OS === "web") return;
+
       setVoiceRecording(
         true
       );
@@ -4478,6 +4531,8 @@ export function AIInvestigationWorkspace({
   useSpeechRecognitionEvent(
     "end",
     () => {
+
+      if (Platform.OS === "web") return;
 
       setVoiceRecording(
         false
@@ -4501,6 +4556,8 @@ export function AIInvestigationWorkspace({
   useSpeechRecognitionEvent(
     "error",
     (event) => {
+
+      if (Platform.OS === "web") return;
 
       console.error(
         "Speech recognition failed:",
@@ -4549,97 +4606,54 @@ export function AIInvestigationWorkspace({
     useCallback(
       async () => {
 
-        // Tapping the mic while listening stops the
-        // current native/web recognition session.
-        if (
-          voiceRecording
-        ) {
+        if (Platform.OS === "web") {
+          setVoiceMessage(null);
 
-          ExpoSpeechRecognitionModule
-            .stop();
+          if (voiceRecording) {
+            webSpeechRecognizer.stop();
+            setVoiceRecording(false);
+            return;
+          }
+
+          if (!WebSpeechRecognizer.isSupported()) {
+            const unsupportedMsg =
+              lang === "kn"
+                ? "ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಧ್ವನಿ ಇನ್‌ಪುಟ್ ಬೆಂಬಲಿತವಾಗಿಲ್ಲ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಪ್ರಶ್ನೆಯನ್ನು ಟೈಪ್ ಮಾಡಿ."
+                : "Voice input is not supported in this browser. Please type your query.";
+            setVoiceMessage(unsupportedMsg);
+            return;
+          }
+
+          webSpeechRecognizer.start({
+            lang,
+            onStart: () => {
+              setVoiceRecording(true);
+            },
+            onResult: (transcript) => {
+              // Populate input field for review/edit without auto-submitting
+              setQueryInput(transcript);
+            },
+            onEnd: () => {
+              setVoiceRecording(false);
+            },
+            onError: (_errType, msg) => {
+              setVoiceRecording(false);
+              setVoiceMessage(msg);
+            },
+          });
 
           return;
         }
 
-        try {
-
-          voiceTranscriptRef.current =
-            "";
-
-          voiceSubmittedRef.current =
-            false;
-
-          const permission =
-            await ExpoSpeechRecognitionModule
-              .requestPermissionsAsync();
-
-          if (
-            !permission.granted
-          ) {
-
-            Alert.alert(
-              "",
-              lang === "kn"
-                ? "ಧ್ವನಿ ತನಿಖೆಯನ್ನು ಬಳಸಲು ಮೈಕ್ರೊಫೋನ್ ಅನುಮತಿ ಅಗತ್ಯವಿದೆ."
-                : "Microphone permission is required for voice investigation."
-            );
-
-            return;
-          }
-
-          setQueryInput(
-            ""
-          );
-
-          ExpoSpeechRecognitionModule
-            .start({
-              lang:
-                lang === "kn"
-                  ? "kn-IN"
-                  : "en-IN",
-
-              interimResults:
-                true,
-
-              continuous:
-                false,
-
-              maxAlternatives:
-                1,
-
-              contextualStrings:
-                [
-                  "FIR",
-                  "accused",
-                  "suspect",
-                  "offender",
-                  "vehicle",
-                  "Bengaluru",
-                  "Karnataka",
-                  "CrimeLens",
-                ],
-            });
-
-        } catch (
-        err
-        ) {
-
-          console.error(
-            "Unable to start speech recognition:",
-            err
-          );
-
-          setVoiceRecording(
-            false
-          );
-
-          Alert.alert(
-            "",
-            lang === "kn"
-              ? "ಧ್ವನಿ ತನಿಖೆಯನ್ನು ಪ್ರಾರಂಭಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
-              : "Unable to start voice investigation. Please try again."
-          );
-        }
+        // ── NATIVE SPEECH TEMPORARILY DISABLED (Expo Go) ─────────────────
+        // Native expo-speech-recognition requires a custom dev build.
+        // Show a non-blocking informational message instead of crashing.
+        const nativeDisabledMsg =
+          lang === "kn"
+            ? "ಧ್ವನಿ ಇನ್‌ಪುಟ್ CrimeLens ವೆಬ್ ಆವೃತ್ತಿಯಲ್ಲಿ ಲಭ್ಯವಿದೆ."
+            : "Voice input is available in the CrimeLens web version.";
+        setVoiceMessage(nativeDisabledMsg);
+        // ─────────────────────────────────────────────────────────────────
       },
       [
         voiceRecording,
@@ -4647,20 +4661,17 @@ export function AIInvestigationWorkspace({
       ]
     );
 
-  // Stop an active native recogniser when this screen is
+  // Stop an active recogniser when this screen is
   // unmounted so the microphone cannot remain active.
   useEffect(
     () => {
 
       return () => {
 
-        try {
-
-          ExpoSpeechRecognitionModule
-            .abort();
-
-        } catch {
-          // Nothing to clean up.
+        if (Platform.OS === "web") {
+          webSpeechRecognizer.stop();
+        } else {
+          // Native speech is temporarily disabled — nothing to clean up.
         }
       };
     },
@@ -6887,136 +6898,51 @@ export function AIInvestigationWorkspace({
           onBack
         }
 
+        onMenuPress={
+          () => setDrawerVisible(true)
+        }
+
       />
 
-      {/* ===============================================
-          #23 — SAVE / INVESTIGATION HISTORY
-      ================================================ */}
-
-      <View
-        style={
-          styles.historyActionBar
-        }
-      >
-
-        <TouchableOpacity
-          style={
-            styles.historyActionButton
-          }
-          onPress={
-            handleSaveInvestigation
-          }
-          accessibilityRole="button"
-          accessibilityLabel={
-            lang === "kn"
-              ? "ತನಿಖೆಯನ್ನು ಉಳಿಸಿ"
-              : "Save investigation"
-          }
-        >
-
-          <Text
-            style={
-              styles.historyActionButtonText
-            }
-          >
-            {lang === "kn"
-              ? "ತನಿಖೆ ಉಳಿಸಿ"
-              : "Save Investigation"}
-          </Text>
-
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.historyActionButton, styles.officerNotesButton]}
-          onPress={() => {
-            resetNoteEditor();
-            setNoteSearch("");
-            setNotesVisible(true);
-          }}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.officerNotesButtonText}>
-            {lang === "kn"
-              ? `ಅಧಿಕಾರಿ ಟಿಪ್ಪಣಿಗಳು (${currentNotes.length})`
-              : `Officer Notes (${currentNotes.length})`}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.historyActionButton, styles.investigationTasksButton]}
-          onPress={() => {
-            resetTaskEditor();
-            setTaskSearch("");
-            setTaskStatusFilter("All");
-            setTasksVisible(true);
-          }}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.investigationTasksButtonText}>
-            {lang === "kn"
-              ? `ತನಿಖಾ ಕಾರ್ಯಗಳು (${currentTasks.length})`
-              : `Investigation Tasks (${currentTasks.length})`}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.historyActionButton}
-          onPress={() => {
-            resetEvidenceComposer();
-            setEvidenceSearch("");
-            setEvidenceFilter("All");
-            setEvidenceVisible(true);
-          }}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.evidenceButtonText}>
-            {lang === "kn"
-              ? `ಸಾಕ್ಷ್ಯ / ಲಗತ್ತುಗಳು (${currentEvidence.length})`
-              : `Evidence / Attachments (${currentEvidence.length})`}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.historyActionButton}
-          onPress={() => setCollaborationVisible(true)}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.collaborationButtonText}>
-            {lang === "kn" ? "ಪ್ರಕರಣ ಸಹಯೋಗ" : "Case Collaboration"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={
-            styles.historyActionButtonSecondary
-          }
-          onPress={
-            () =>
-              setHistoryVisible(
-                true
-              )
-          }
-          accessibilityRole="button"
-          accessibilityLabel={
-            lang === "kn"
-              ? "ತನಿಖಾ ಇತಿಹಾಸ"
-              : "Investigation history"
-          }
-        >
-
-          <Text
-            style={
-              styles.historyActionButtonSecondaryText
-            }
-          >
-            {lang === "kn"
-              ? `ಇತಿಹಾಸ (${savedInvestigations.length})`
-              : `History (${savedInvestigations.length})`}
-          </Text>
-
-        </TouchableOpacity>
-
-      </View>
+      <NavigationDrawer
+        visible={drawerVisible}
+        onClose={() => setDrawerVisible(false)}
+        lang={lang}
+        savedInvestigations={savedInvestigations}
+        notesCount={currentNotes.length}
+        tasksCount={currentTasks.length}
+        evidenceCount={currentEvidence.length}
+        officerName={mockData.officerName}
+        officerBadge={mockData.officerBadge}
+        officerRole={mockData.officerRole}
+        onNewInvestigation={() => {
+          setMessages([]);
+          setQueryInput("");
+        }}
+        onOpenHistory={() => setHistoryVisible(true)}
+        onSaveInvestigation={handleSaveInvestigation}
+        onOpenNotes={() => {
+          resetNoteEditor();
+          setNoteSearch("");
+          setNotesVisible(true);
+        }}
+        onOpenTasks={() => {
+          resetTaskEditor();
+          setTaskSearch("");
+          setTaskStatusFilter("All");
+          setTasksVisible(true);
+        }}
+        onOpenEvidence={() => {
+          resetEvidenceComposer();
+          setEvidenceSearch("");
+          setEvidenceFilter("All");
+          setEvidenceVisible(true);
+        }}
+        onOpenCollaboration={() => setCollaborationVisible(true)}
+        onSelectSavedInvestigation={(inv) => {
+          setHistoryVisible(true);
+        }}
+      />
 
       {/* ===============================================
           REPORT GENERATION BANNER
@@ -7165,6 +7091,18 @@ export function AIInvestigationWorkspace({
           handleRemoveAttachment
         }
 
+        voiceActive={
+          voiceRecording
+        }
+
+        voiceMessage={
+          voiceMessage
+        }
+
+        onClearVoiceMessage={
+          () => setVoiceMessage(null)
+        }
+
       />
 
       {/* ===============================================
@@ -7199,35 +7137,7 @@ export function AIInvestigationWorkspace({
 
       />
 
-      {/* ===============================================
-          AI STATUS CARD
-      ================================================ */}
 
-      <AIStatusCard
-
-        lang={
-          lang
-        }
-
-        status={
-          aiStatus.online
-            ? "online"
-            : "offline"
-        }
-
-        confidenceScore={
-          aiStatus.confidenceScore
-        }
-
-        databaseSynced={
-          aiStatus.databaseSynced
-        }
-
-        lastUpdated={
-          aiStatus.lastUpdated
-        }
-
-      />
 
       {/* ===============================================
           #23 — INVESTIGATION HISTORY MODAL

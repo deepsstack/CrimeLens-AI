@@ -36,6 +36,9 @@ export type WelcomeCardProps = {
   officerName: string;
   officerRole: string;
   onRemoveAttachment?: (id: string) => void;
+  voiceActive?: boolean;
+  voiceMessage?: string | null;
+  onClearVoiceMessage?: () => void;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -63,11 +66,43 @@ export function WelcomeCard({
   officerName,
   officerRole,
   onRemoveAttachment,
+  voiceActive = false,
+  voiceMessage = null,
+  onClearVoiceMessage,
 }: WelcomeCardProps) {
   const t = T[lang];
 
   return (
     <View style={styles.bar} accessibilityRole="none">
+      {/* ── Voice Message Banner (Non-blocking alert/toast) ── */}
+      {voiceMessage ? (
+        <View style={styles.voiceMessageBanner}>
+          <Text style={styles.voiceMessageText} numberOfLines={2}>
+            {voiceMessage}
+          </Text>
+          {onClearVoiceMessage && (
+            <TouchableOpacity
+              onPress={onClearVoiceMessage}
+              style={styles.voiceMessageDismiss}
+              accessibilityLabel="Dismiss message"
+              accessibilityRole="button"
+            >
+              <Text style={styles.voiceMessageDismissText}>×</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : null}
+
+      {/* ── Listening Status Badge ── */}
+      {voiceActive && (
+        <View style={styles.listeningBadge}>
+          <View style={styles.listeningDot} />
+          <Text style={styles.listeningText}>
+            {lang === "kn" ? "ಆಲಿಸಲಾಗುತ್ತಿದೆ... ಮಾತನಾಡಿ" : "Listening... Speak your query"}
+          </Text>
+        </View>
+      )}
+
       {/* ── Attachment chips (shown above input when files attached) ── */}
       {attachments.length > 0 && (
         <ScrollView
@@ -113,11 +148,11 @@ export function WelcomeCard({
 
         {/* Text input */}
         <TextInput
-          style={styles.textInput}
+          style={[styles.textInput, voiceActive && styles.textInputActive]}
           value={queryInput}
           onChangeText={onQueryChange}
-          placeholder={t.queryPlaceholder}
-          placeholderTextColor="#94A3B8"
+          placeholder={voiceActive ? (lang === "kn" ? "ಆಲಿಸಲಾಗುತ್ತಿದೆ..." : "Listening...") : t.queryPlaceholder}
+          placeholderTextColor={voiceActive ? "#0F4C81" : "#94A3B8"}
           maxLength={500}
           multiline
           onSubmitEditing={onQuerySubmit}
@@ -129,12 +164,12 @@ export function WelcomeCard({
         {/* Mic */}
         <TouchableOpacity
           onPress={onVoicePress}
-          style={styles.sideButton}
-          accessibilityLabel="Start voice input"
+          style={[styles.sideButton, voiceActive && styles.micButtonActive]}
+          accessibilityLabel={voiceActive ? "Stop listening" : "Start voice input"}
           accessibilityRole="button"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Mic size={20} color="#64748B" />
+          <Mic size={20} color={voiceActive ? "#FFFFFF" : "#64748B"} />
         </TouchableOpacity>
 
         {/* Send */}
@@ -211,8 +246,69 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 2,
   },
+  micButtonActive: {
+    backgroundColor: "#0F4C81",
+  },
   sendButton: {
     backgroundColor: POLICE_BLUE,
+  },
+
+  // Voice message & status styles
+  voiceMessageBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 8,
+  },
+  voiceMessageText: {
+    fontFamily: "Inter-Medium",
+    fontSize: 12,
+    color: "#991B1B",
+    flex: 1,
+  },
+  voiceMessageDismiss: {
+    marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  voiceMessageDismissText: {
+    fontFamily: "Inter-Bold",
+    fontSize: 14,
+    color: "#991B1B",
+  },
+  listeningBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    alignSelf: "flex-start",
+    marginBottom: 8,
+  },
+  listeningDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#2563EB",
+  },
+  listeningText: {
+    fontFamily: "Inter-Medium",
+    fontSize: 12,
+    color: "#1E40AF",
+  },
+  textInputActive: {
+    borderColor: "#3B82F6",
+    backgroundColor: "#EFF6FF",
   },
 
   // Attachment chips row (above input row)

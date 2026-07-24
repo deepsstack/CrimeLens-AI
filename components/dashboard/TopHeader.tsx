@@ -7,7 +7,7 @@
  *               2.5 (live date/time), 14.4 (search)
  */
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -36,24 +36,6 @@ export type TopHeaderProps = {
   onSearchPress?: () => void;
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatDateTime(): string {
-  const now = new Date();
-  const dateStr = now.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-  const timeStr = now.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-  return `${dateStr}  ${timeStr}`;
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function TopHeader({
@@ -68,16 +50,6 @@ export function TopHeader({
   onProfilePress,
   onSearchPress,
 }: TopHeaderProps) {
-  const [dateTime, setDateTime] = useState<string>(formatDateTime);
-
-  // Requirement 2.5 — live clock updated every second, cleaned up on unmount
-  useEffect(() => {
-    const id = setInterval(() => {
-      setDateTime(formatDateTime());
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
-
   const t = T[lang];
   const badgeLabel = formatBadgeCount(alertCount);
   const nextLang: Lang = lang === "en" ? "kn" : "en";
@@ -125,16 +97,6 @@ export function TopHeader({
           >
             <Text style={styles.badgeChipText}>{mockData.officerBadge}</Text>
           </TouchableOpacity>
-        </View>
-      )}
-
-      {/* ── Right: date-time + action icons ── */}
-      {!searchOpen && (
-        <View style={styles.rightSection}>
-          {/* Requirement 2.5 — live date/time */}
-          <Text style={styles.dateTimeText} numberOfLines={1} accessibilityLabel={`Current time: ${dateTime}`}>
-            {dateTime}
-          </Text>
         </View>
       )}
 

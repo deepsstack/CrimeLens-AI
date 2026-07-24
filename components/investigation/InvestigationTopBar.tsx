@@ -14,7 +14,7 @@ import {
   Animated,
   Platform,
 } from "react-native";
-import { Mic, ChevronLeft } from "lucide-react-native";
+import { Mic, ChevronLeft, Menu } from "lucide-react-native";
 import { T, type Lang } from "../../i18n/investigationTranslations";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -25,6 +25,7 @@ export type InvestigationTopBarProps = {
   onVoicePress: () => void;
   voiceActive: boolean;
   onBack?: () => void;
+  onMenuPress?: () => void;
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -35,6 +36,7 @@ export function InvestigationTopBar({
   onVoicePress,
   voiceActive,
   onBack,
+  onMenuPress,
 }: InvestigationTopBarProps) {
   const t = T[lang];
   const nextLang: Lang = lang === "en" ? "kn" : "en";
@@ -111,8 +113,19 @@ export function InvestigationTopBar({
   return (
     // Requirement 1.1 — Police Blue #0F4C81 background, sticky zIndex 10
     <View style={styles.container} accessibilityRole="header">
-      {/* ── Left: optional back button + title/subtitle ── */}
+      {/* ── Left: drawer menu icon + optional back button + title/subtitle ── */}
       <View style={styles.leftSection}>
+        {onMenuPress && (
+          <TouchableOpacity
+            onPress={onMenuPress}
+            style={styles.backButton}
+            accessibilityLabel="Open navigation menu"
+            accessibilityRole="button"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Menu size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        )}
         {onBack && (
           <TouchableOpacity
             onPress={onBack}

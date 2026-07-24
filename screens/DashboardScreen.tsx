@@ -47,7 +47,6 @@ import { DistrictChart } from "../components/dashboard/DistrictChart";
 import { CategoryDonut } from "../components/dashboard/CategoryDonut";
 import { FIRSection } from "../components/dashboard/FIRSection";
 import { IntelFeed } from "../components/dashboard/IntelFeed";
-import { QuickTools } from "../components/dashboard/QuickTools";
 import { AIPanel } from "../components/dashboard/AIPanel";
 
 // ── Additional Screens ────────────────────────────────────────────────────────
@@ -321,7 +320,6 @@ export function DashboardScreen({ lang, setLang, setScreen, currentUser }: Dashb
           <CategoryDonut lang={lang} categoriesData={derivedCategories} />
           <FIRSection lang={lang} firsData={displayFIRs} loading={loadingCatalyst} />
           <IntelFeed lang={lang} />
-          <QuickTools lang={lang} />
           <AIPanel lang={lang} />
         </>
       );

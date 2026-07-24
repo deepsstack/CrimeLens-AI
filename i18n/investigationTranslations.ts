@@ -144,8 +144,8 @@ export const T: Record<Lang, InvestigationT> = {
   // ─── English ───────────────────────────────────────────────────────────────
   en: {
     // Top Bar
-    workspaceTitle: "AI Investigation Workspace",
-    workspaceSubtitle: "Agentic Crime Intelligence Assistant",
+    workspaceTitle: "AI Investigation Copilot",
+    workspaceSubtitle: "Analyze cases, entities, crime patterns and investigative connections.",
 
     // Welcome Card
     greetingMorning: "Good Morning",
@@ -283,8 +283,8 @@ export const T: Record<Lang, InvestigationT> = {
   // ─── Kannada ───────────────────────────────────────────────────────────────
   kn: {
     // Top Bar
-    workspaceTitle: "AI ತನಿಖೆ ವಿಭಾಗ",
-    workspaceSubtitle: "ಏಜೆಂಟಿಕ್ ಅಪರಾಧ ಗುಪ್ತಚರ ಸಹಾಯಕ",
+    workspaceTitle: "AI ಅಪರಾಧ ತನಿಖಾ ಕೋಪೈಲಟ್",
+    workspaceSubtitle: "ಪ್ರಕರಣಗಳು, ಸಂಸ್ಥೆಗಳು, ಅಪರಾಧ ಶೈಲಿಗಳು ಮತ್ತು ತನಿಖಾ ಸಂಪರ್ಕಗಳನ್ನು ವಿಶ್ಲೇಷಿಸಿ.",
 
     // Welcome Card
     greetingMorning: "ಶುಭ ಬೆಳಿಗ್ಗೆ",

@@ -13,7 +13,7 @@
 
 // ─── Base URL ─────────────────────────────────────────────────────────────────
 
-export const API_BASE_URL = "http://localhost:3001";
+export const API_BASE_URL = "http://172.16.10.162:3001";
 
 // ─── Core entity types ────────────────────────────────────────────────────────
 
@@ -34,7 +34,7 @@ export interface FIRCase {
 
   ACCUSED_NAME?: string;
   VICTIM_NAME?: string;
-  
+
 
   [key: string]: unknown;
 }
