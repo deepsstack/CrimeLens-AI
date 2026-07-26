@@ -13,7 +13,8 @@
 
 // ─── Base URL ─────────────────────────────────────────────────────────────────
 
-export const API_BASE_URL = "http://172.16.10.162:3001";
+export const API_BASE_URL =
+  "https://crimelens-ai-60079382706.development.catalystserverless.in/server/crimelens_api";
 
 // ─── Core entity types ────────────────────────────────────────────────────────
 

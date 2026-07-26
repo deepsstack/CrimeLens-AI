@@ -1,0 +1,30 @@
+{
+  "defaults": {
+    "project": 1,
+    "env": 1
+  },
+  "actives": {
+    "project": 1,
+    "env": 1
+  },
+  "projects": [
+    {
+      "idx": 1,
+      "id": "54189000000013048",
+      "name": "CrimeLens-AI",
+      "domain": {
+        "id": "50044217098",
+        "name": "crimelens-ai-60079382706.development"
+      },
+      "timezone": "Asia/Kolkata",
+      "env": [
+        {
+          "idx": 1,
+          "id": "60079382706",
+          "name": "Development",
+          "type": 3
+        }
+      ]
+    }
+  ]
+}

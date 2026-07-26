@@ -20,6 +20,9 @@
           "speechRecognitionPermission": "Allow CrimeLens AI to convert speech into investigation queries."
         }
       ]
-    ]
+    ],
+    "experiments": {
+      "baseUrl": "/app"
+    }
   }
 }
